@@ -21,6 +21,7 @@
 #define I2C_SLAVE_ADDR	1
 
 static int g_i2cfd;
+static uint8_t curslave_addr = 0;
 
 static int i2c_open(char *dev)
 {
@@ -40,8 +41,9 @@ static int i2c_close()
 
 static int i2c_setslave(uint8_t addr)
 {
-	if (ioctl(g_i2cfd, I2C_SLAVE, addr >> 1) < 0) {
-		printf("Unable to find slave addr\n");
+	curslave_addr = addr;
+	if (ioctl(g_i2cfd, I2C_SLAVE, addr) < 0) {
+		printf("Unable to find slave addr %x\n", addr);
 		return 1;
 	}
 	return 0;
@@ -53,7 +55,7 @@ static int i2c_write(unsigned char *wbuf, unsigned int wlen)
 
 	ret = write(g_i2cfd, wbuf, wlen);
 	if (ret != wlen) {
-		printf("Write to slave failed!(%d-%d)\n", ret, wlen);
+		printf("Write to %x failed!(%d-%d)\n", curslave_addr, ret, wlen);
 		if (ret < 0)
 			return -1;
 
@@ -69,7 +71,7 @@ static int i2c_read(unsigned char *rbuf, unsigned int rlen)
 
 	ret = read(g_i2cfd, rbuf, rlen);
 	if (ret != rlen) {
-		printf("Read from slave failed!(%d-%d)\n", ret, rlen);
+		printf("Read from %x failed!(%d-%d)\n", curslave_addr, ret, rlen);
 		if (ret < 0)
 			return -1;
 		return 1;
