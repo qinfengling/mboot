@@ -3,7 +3,7 @@
 #define MCS1_ADDR_BASE 0x80000
 #define MCS1_LEN 464752
 #define SPI_FLASH_PAGE 256 //byte
-#define CMD_LEN;
+#define CMD_LEN 4
 
 unsigned int crc16_table[256] = {
         0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
@@ -40,7 +40,7 @@ unsigned int crc16_table[256] = {
         0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
 };
 
-unsigned short mboot_crc16(unsigned short crc_init, const unsigned char *buffer, int len)
+unsigned short mboot_crc16(unsigned short crc_init, unsigned char *buffer, int len)
 {
         unsigned short crc;
 
@@ -76,9 +76,10 @@ void set_mosi_dat(unsigned char *buf, unsigned char len){
 void flash_earse(){
 	unsigned char buf[4];
 	unsigned int addr = MCS1_ADDR_BASE;
+	int i;
 	buf[0] = 0xd8;
 	
-	for(int i = 0; i < 8; i++){
+	for(i = 0; i < 8; i++){
 		set_cs(0);
 		buf[1] = ((addr >> 16) & 0xff);
 		buf[2] = ((addr >> 8) & 0xff);
@@ -146,10 +147,11 @@ void mboot(){
 	unsigned int addr = MCS1_ADDR_BASE;
 	int byte_num, all_byte = MCS1_LEN;
 	unsigned short crc_init = 0;
+	FILE *mboot_mcs_fp_new;
+	int j;
 
         i2c_open(I2C_DEV);
         i2c_setslave(I2C_SLAVE_ADDR);
-
 
 	mboot_mcs_fp_new = fopen("./mm_new.mcs", "rt");
 
@@ -166,9 +168,9 @@ void mboot(){
 			all_byte = 0;
 		}
 		
-		for(int j = 0; j < byte_num; j++){
+		for(j = 0; j < byte_num; j++){
                 	FLASH_PAGE[j] = fgetc(mboot_mcs_fp_new);
-			crc_init = mboot_crc16(crc_init, FLASH_PAGE[j], 1);
+			crc_init = mboot_crc16(crc_init, &FLASH_PAGE[j], 1);
 		}
 		flash_prog_page(FLASH_PAGE, addr, byte_num);
 		addr += byte_num;
