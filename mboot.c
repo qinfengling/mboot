@@ -1,7 +1,7 @@
 #define MCS1_INFO_ADDR_BASE 0xfff80
 #define MCS1_INFO_LEN 16 //bytes
 #define MCS1_ADDR_BASE 0x80000
-#define MCS1_LEN 464752
+int MCS1_LEN;
 #define SPI_FLASH_PAGE 256 //byte
 #define CMD_LEN 4
 void flash_prog_en();
@@ -148,10 +148,12 @@ void flash_prog_info(unsigned short crc, unsigned int len){
 void mboot(){
 	unsigned char FLASH_PAGE[SPI_FLASH_PAGE];
 	unsigned int addr = MCS1_ADDR_BASE;
-	int byte_num, all_byte = MCS1_LEN;
+	int byte_num, all_byte;
 	unsigned short crc_init = 0;
 	FILE *mboot_mcs_fp_new;
 	int j;
+	mboot_mcs_file();
+	all_byte = MCS1_LEN;
 
         i2c_open(I2C_DEV);
         i2c_setslave(I2C_SLAVE_ADDR);
@@ -182,3 +184,54 @@ void mboot(){
         fclose(mboot_mcs_fp_new);
 }
 
+char char2byte(char char0, char char1)
+{
+	if(char0 >= 'A' && char0 <= 'F')
+		char0 = char0 - 'A' + 10;
+	else
+		char0 = char0 - '0';
+
+	if(char1 >= 'A' && char1 <= 'F')
+		char1 = char1 - 'A' + 10;
+	else
+		char1 = char1 - '0';
+
+	return (char0 << 4) | char1;
+}
+
+int mboot_mcs_file()
+{
+	int j, i, i_max, byte_num;
+	unsigned char tmp[1000];
+	unsigned char data;
+	FILE *mboot_mcs_fp;
+	FILE *mboot_mcs_fp_new;
+
+
+	MCS1_LEN = 0;
+	mboot_mcs_fp = fopen("./mm.mcs", "rt");
+	mboot_mcs_fp_new = fopen("./mm_new.mcs", "wb");
+	while(1){
+		i = 0;
+		while(1){
+			tmp[i] = fgetc(mboot_mcs_fp);
+			if(tmp[i] == '\n'){
+				break;
+			}
+			i++;
+		}
+		if(tmp[7] == '0' && tmp[8] == '0'){
+			byte_num = char2byte(tmp[1], tmp[2]);
+			for(i = 0; i < byte_num*2; i+=2){
+				data = char2byte(tmp[9+i], tmp[9+i+1]);
+				fputc(data, mboot_mcs_fp_new);
+				MCS1_LEN++;
+			}
+		} else if(tmp[7] == '0' && tmp[8] == '1')
+			break;
+	}
+
+	fclose(mboot_mcs_fp);
+	fclose(mboot_mcs_fp_new);
+	return 0;
+}
