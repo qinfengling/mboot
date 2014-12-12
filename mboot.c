@@ -91,7 +91,9 @@ void flash_earse(){
 		set_cs(1);
 		addr += 0x10000;
 		sleep_ms(1000);
+		printf("+");
 	}
+	printf("\n");
 }
 
 void flash_prog_page(unsigned char *buf, unsigned int addr, unsigned int len){
@@ -160,9 +162,13 @@ void mboot(){
 
 	mboot_mcs_fp_new = fopen("./mm_new.mcs", "rt");
 
+	printf("Flash Erase Begin!\n");
 	enable_download();
 	flash_prog_en();
 	flash_earse();
+	printf("Flash Erase Success!\n");
+
+	printf("Flash Program Begin!\n");
         while(all_byte){
 		if(all_byte >= SPI_FLASH_PAGE){
 			byte_num = SPI_FLASH_PAGE;
@@ -178,10 +184,13 @@ void mboot(){
 		}
 		flash_prog_page(FLASH_PAGE, addr, byte_num);
 		addr += byte_num;
+		printf("+");
         }
+	printf("\nFlash Program Success!\n");
 
 	flash_prog_info(crc_init, MCS1_LEN);
         fclose(mboot_mcs_fp_new);
+	printf("Flash Program Done!\n");
 }
 
 char char2byte(char char0, char char1)
@@ -210,7 +219,19 @@ int mboot_mcs_file()
 
 	MCS1_LEN = 0;
 	mboot_mcs_fp = fopen("./mm.mcs", "rt");
+	if(mboot_mcs_fp == NULL){
+	    printf("open mm.mcs error!\n");
+	    exit(1);
+	} else
+	    printf("open mm.mcs success!\n");
+
 	mboot_mcs_fp_new = fopen("./mm_new.mcs", "wb");
+	if(mboot_mcs_fp_new == NULL){
+	    printf("open mm_new.mcs error!\n");
+	    exit(1);
+	} else
+	    printf("open mm_new.mcs success!\n");
+
 	while(1){
 		i = 0;
 		while(1){
