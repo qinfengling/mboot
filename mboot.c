@@ -4,6 +4,7 @@
 #define MCS1_LEN 464752
 #define SPI_FLASH_PAGE 256 //byte
 #define CMD_LEN 4
+void flash_prog_en();
 
 unsigned int crc16_table[256] = {
         0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
@@ -55,7 +56,7 @@ unsigned short mboot_crc16(unsigned short crc_init, unsigned char *buffer, int l
 void enable_download(){
 	unsigned char buf[1];
 	i2c_setslave(0x40);
-	buf[1] = 0x2;//enable download
+	buf[0] = 0x2;//enable download
 	i2c_write(buf, 1);
 	i2c_setslave(0x41);
 }
@@ -63,12 +64,12 @@ void enable_download(){
 void set_cs(unsigned char dat){
 	unsigned char buf[1];
 	i2c_setslave(0x40);
-	buf[1] = dat;//set cs
+	buf[0] = dat;//set cs
 	i2c_write(buf, 1);
 	i2c_setslave(0x41);
 }
 
-void set_mosi_dat(unsigned char *buf, unsigned char len){
+void set_mosi_dat(unsigned char *buf, unsigned int len){
 	i2c_setslave(0x41);
 	i2c_write(buf, len);
 }
@@ -80,6 +81,7 @@ void flash_earse(){
 	buf[0] = 0xd8;
 	
 	for(i = 0; i < 8; i++){
+		flash_prog_en();
 		set_cs(0);
 		buf[1] = ((addr >> 16) & 0xff);
 		buf[2] = ((addr >> 8) & 0xff);
@@ -94,8 +96,9 @@ void flash_earse(){
 
 void flash_prog_page(unsigned char *buf, unsigned int addr, unsigned int len){
 	unsigned char buf_cmd[4];
+	flash_prog_en();
 	set_cs(0);
-	buf_cmd[0] = 0x03;
+	buf_cmd[0] = 0x02;
 	buf_cmd[1] = ((addr >> 16) & 0xff);
 	buf_cmd[2] = ((addr >> 8) & 0xff);
 	buf_cmd[3] = (addr & 0xff);
@@ -158,7 +161,6 @@ void mboot(){
 	enable_download();
 	flash_prog_en();
 	flash_earse();
-	flash_prog_en();
         while(all_byte){
 		if(all_byte >= SPI_FLASH_PAGE){
 			byte_num = SPI_FLASH_PAGE;
